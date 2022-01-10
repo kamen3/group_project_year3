@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/102/three.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/2.1.2/TweenMax.min.js"></script>
+
+    <script>
+
+        var scene = new THREE.Scene();
+
+        //Other cameras - ArrayCamera, CubeCamera, OrthographicCamera, StereoCamera
+        //Constructor for this takes - FOV, Aspect Ratio, Near and Far plain
+        var camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.x = 0;
+        camera.position.y = 0;
+        camera.position.z = 5;
+
+        //Many renderers - WebGL, 2D CSS, 3D CSS, SVG
+        var renderer = new THREE.WebGLRenderer({antialias: true});
+        renderer.setClearColor("#e5e5e5");
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        document.body.appendChild(renderer.domElement);
+
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+        })
+
+        //For detecting where the mouse is hovering and interacting
+        var raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+
+        var group = new THREE.Group();
+
+        const LENGTH_CANVAS = 5;
+        const ORIGIN_X = -LENGTH_CANVAS/2;
+        const ORIGIN_Y = LENGTH_CANVAS/2;
+        const RESOLUTION = 100;
+        const LENGTH_PIXEL = LENGTH_CANVAS / RESOLUTION
+        for(var i=0; i<RESOLUTION; i++)
+        {
+            for(var y=0; y<RESOLUTION; y++)
+            {
+                var geometry = new THREE.BoxGeometry(LENGTH_PIXEL, LENGTH_PIXEL,0.01);
+                var material = new THREE.MeshLambertMaterial({color: 0xFFCC00});
+                var mesh = new THREE.Mesh(geometry, material);
+                mesh.position.x = ORIGIN_X + i*LENGTH_PIXEL;
+                mesh.position.y = ORIGIN_Y - y*LENGTH_PIXEL;
+                mesh.position.z = 0
+
+                group.add(mesh);
+            }
+        }
+
+        scene.add(group);
+
+        //Colour, intensity, position (can set other things from constructor)
+        var light = new THREE.PointLight(0xFFFFFF, 1, 500);
+        light.position.set(10,0,25);
+        scene.add(light);
+
+        var render = function() {
+            requestAnimationFrame(render);
+            renderer.render(scene, camera);
+        }
+
+        render();
+
+        var drawing = false;
+        var anchorX;
+        var anchorY;
+        var anchorRotX;
+        var anchorRotY;
+
+        function onMouseDown(event)
+        {
+            //Apparently needed lol
+            event.preventDefault();
+
+            //This is all apparently coming "from the documentation", so there's probably some official tutorial
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+            mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            //List of objects that are being intersected by the mouse
+            var intersects = raycaster.intersectObjects(scene.children, true);
+            if(intersects.length == 0) drawing = false;
+            else
+            {
+                drawing = true;
+                intersects[0].object.material.color.set(0xff0000);
+            }
+
+            anchorX = mouse.x;
+            anchorY = mouse.y;
+            anchorRotX = group.rotation.x;
+            anchorRotY = group.rotation.y;
+
+            window.addEventListener('mousemove', onMouseMove);
+        }
+
+        function onMouseUp(event)
+        {
+            //Apparently needed lol
+            event.preventDefault();
+
+            window.removeEventListener('mousemove', onMouseMove);
+        }
+
+        function onMouseMove(event)
+        {
+            //Apparently needed lol
+            event.preventDefault();
+
+            //This is all apparently coming "from the documentation", so there's probably some official tutorial
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+            mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+            if(drawing)
+            {
+                /* Drawing mode */
+                raycaster.setFromCamera(mouse, camera);
+
+                //List of objects that are being intersected by the mouse
+                var intersects = raycaster.intersectObjects(scene.children, true);
+                intersects[0].object.material.color.set(0xff0000);
+                
+            }
+            else
+            {
+                /* Rotating Mode */
+                group.rotation.x = anchorRotX + (anchorY - mouse.y) * 1.5;
+                group.rotation.y = anchorRotY - (anchorX - mouse.x) * 1.5;
+            }
+
+        }
+
+        window.addEventListener('mousedown', onMouseDown);
+        window.addEventListener('mouseup', onMouseUp);
+
+    </script>
+</body>
+</html>
